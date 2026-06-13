@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { Metadata } from "next";
 import { getGameBySlug } from "@/lib/db/queries";
 import { RequirementsTable } from "@/components/games/requirements-table";
+
+export const dynamic = "force-dynamic";
 import { HardwareForm } from "@/components/detection/hardware-form";
 import { ArrowRight } from "lucide-react";
 

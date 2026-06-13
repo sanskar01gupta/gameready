@@ -1,20 +1,26 @@
 import type { MetadataRoute } from "next";
-import { db, schema } from "@/lib/db";
-const { games } = schema;
 
 const BASE_URL = "https://gameready.app";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const allGames = await db
-    .select({ slug: games.slug, updatedAt: games.updatedAt })
-    .from(games);
+  // Try to fetch games from DB, fall back gracefully if no database
+  let gameEntries: MetadataRoute.Sitemap = [];
+  try {
+    const { db, schema } = await import("@/lib/db");
+    const { games } = schema;
+    const allGames = await db
+      .select({ slug: games.slug, updatedAt: games.updatedAt })
+      .from(games);
 
-  const gameEntries = allGames.map((g) => ({
-    url: `${BASE_URL}/games/${g.slug}`,
-    lastModified: g.updatedAt ?? new Date(),
-    changeFrequency: "weekly" as const,
-    priority: 0.8,
-  }));
+    gameEntries = allGames.map((g) => ({
+      url: `${BASE_URL}/games/${g.slug}`,
+      lastModified: g.updatedAt ?? new Date(),
+      changeFrequency: "weekly" as const,
+      priority: 0.8,
+    }));
+  } catch {
+    // No database available — return base sitemap without game pages
+  }
 
   return [
     {

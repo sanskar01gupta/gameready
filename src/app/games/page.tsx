@@ -10,7 +10,13 @@ export const metadata: Metadata = {
 };
 
 export default async function GamesPage() {
-  const { games } = await getAllGames(100, 0);
+  let games: Awaited<ReturnType<typeof getAllGames>>["games"] = [];
+  try {
+    const result = await getAllGames(100, 0);
+    games = result.games;
+  } catch {
+    // No database available yet — show empty state
+  }
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 sm:py-16">

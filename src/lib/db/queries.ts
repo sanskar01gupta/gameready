@@ -1,8 +1,11 @@
-import { db, schema } from "./index";
+import { db, schema, isPostgres } from "./index";
 import { eq, like, desc, and, sql, or, gte, lte } from "drizzle-orm";
 import type { GameWithRequirements, GameListItem } from "@/types/game";
 
 const { games, gameRequirements, reports, popularSearches } = schema;
+
+// Helper: returns the correct "now" expression for the active dialect
+const now = () => (isPostgres ? sql`NOW()` : sql`(datetime('now'))`);
 
 // ─── Games ───────────────────────────────────────────────────────────────────
 
@@ -193,7 +196,7 @@ export async function getReportBySlug(slug: string) {
     .update(reports)
     .set({
       viewerCount: (report.viewerCount ?? 0) + 1,
-      lastViewed: sql`(datetime('now'))`,
+      lastViewed: now(),
     })
     .where(eq(reports.id, report.id));
 
@@ -224,7 +227,7 @@ export async function incrementPopularSearch(gameId: string) {
       .update(popularSearches)
       .set({
         searchCount: (existing[0].searchCount ?? 0) + 1,
-        lastSearchedAt: sql`(datetime('now'))`,
+        lastSearchedAt: now(),
       })
       .where(eq(popularSearches.gameId, gameId));
   } else {
