@@ -91,13 +91,14 @@ function findClosestMatch(
  * Returns a "safe" common CPU for the given core count to enable scoring.
  */
 function estimateCpuFromCores(cores: number): string | null {
-  if (cores >= 24) return "Intel Core i9-13900K";
-  if (cores >= 20) return "Intel Core i7-13700K";
-  if (cores >= 16) return "AMD Ryzen 7 5800X";
-  if (cores >= 12) return "AMD Ryzen 5 5600X";
-  if (cores >= 8) return "Intel Core i5-8400";
-  if (cores >= 6) return "Intel Core i5-6600";
-  if (cores >= 4) return "Intel Core i3-9100";
-  if (cores >= 2) return "Intel Core i3-2100";
+  if (cores >= 32) return "AMD Ryzen 9 9950X";
+  if (cores >= 24) return "Intel Core i9-14900K";
+  if (cores >= 20) return "Intel Core i7-14700K";
+  if (cores >= 16) return "AMD Ryzen 7 7800X3D";
+  if (cores >= 12) return "AMD Ryzen 5 7600X";
+  if (cores >= 8) return "Intel Core i5-12400F";
+  if (cores >= 6) return "Intel Core i5-10400";
+  if (cores >= 4) return "Intel Core i3-12100";
+  if (cores >= 2) return "Intel Core i3-6100";
   return null;
 }
