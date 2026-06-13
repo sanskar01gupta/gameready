@@ -1,11 +1,11 @@
-import { db, schema, isPostgres } from "./index";
+import { db, schema } from "./index";
 import { eq, like, desc, and, sql, or, gte, lte } from "drizzle-orm";
 import type { GameWithRequirements, GameListItem } from "@/types/game";
 
 const { games, gameRequirements, reports, popularSearches } = schema;
 
-// Helper: returns the correct "now" expression for the active dialect
-const now = () => (isPostgres ? sql`NOW()` : sql`(datetime('now'))`);
+// Both local SQLite and Turso use SQLite-compatible datetime
+const now = () => sql`(datetime('now'))`;
 
 // ─── Games ───────────────────────────────────────────────────────────────────
 

@@ -1,23 +1,15 @@
 import { defineConfig } from "drizzle-kit";
 
-const dbUrl = process.env.DATABASE_URL || "";
+const tursoUrl = process.env.TURSO_URL || "";
+const tursoToken = process.env.TURSO_AUTH_TOKEN || "";
 
-// Production: Neon PostgreSQL
-const isPostgres =
-  dbUrl.startsWith("postgres://") ||
-  dbUrl.startsWith("postgresql://") ||
-  dbUrl.startsWith("neon://");
+const isTurso = !!(tursoUrl && tursoToken);
 
-export default isPostgres
-  ? defineConfig({
-      schema: "./src/lib/db/schema.pg.ts",
-      out: "./drizzle",
-      dialect: "postgresql",
-      dbCredentials: { url: dbUrl },
-    })
-  : defineConfig({
-      schema: "./src/lib/db/schema.ts",
-      out: "./drizzle",
-      dialect: "sqlite",
-      dbCredentials: { url: "./gameready.db" },
-    });
+export default defineConfig({
+  schema: "./src/lib/db/schema.ts",
+  out: "./drizzle",
+  dialect: isTurso ? "turso" : "sqlite",
+  dbCredentials: isTurso
+    ? { url: tursoUrl, authToken: tursoToken }
+    : { url: "./gameready.db" },
+});

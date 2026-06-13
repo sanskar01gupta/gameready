@@ -1,21 +1,21 @@
 import * as schemaSqlite from "./schema";
-import * as schemaPg from "./schema.pg";
 
-let db: ReturnType<typeof import("drizzle-orm/better-sqlite3").drizzle>;
+let db: ReturnType<typeof import("drizzle-orm/libsql").drizzle>;
 let schema: typeof schemaSqlite;
-let isPostgres = false;
+let isRemote = false;
 
-const dbUrl = process.env.DATABASE_URL || "";
+const tursoUrl = process.env.TURSO_URL || "";
+const tursoToken = process.env.TURSO_AUTH_TOKEN || "";
 
-// ── Neon PostgreSQL (production / Vercel) ─────────────────────────────
-if (dbUrl.startsWith("postgres://") || dbUrl.startsWith("postgresql://") || dbUrl.startsWith("neon://")) {
-  const { neon } = require("@neondatabase/serverless");
-  const { drizzle: drizzlePg } = require("drizzle-orm/neon-http");
+// ── Turso / libSQL (production / Vercel) ──────────────────────────────
+if (tursoUrl && tursoToken) {
+  const { createClient } = require("@libsql/client");
+  const { drizzle: drizzleLibsql } = require("drizzle-orm/libsql");
 
-  const sql = neon(dbUrl);
-  db = drizzlePg(sql, { schema: schemaPg });
-  schema = schemaPg as unknown as typeof schemaSqlite;
-  isPostgres = true;
+  const client = createClient({ url: tursoUrl, authToken: tursoToken });
+  db = drizzleLibsql(client, { schema: schemaSqlite });
+  schema = schemaSqlite;
+  isRemote = true;
 }
 // ── SQLite (local development) ────────────────────────────────────────
 else {
@@ -24,7 +24,7 @@ else {
     const { drizzle: drizzleSqlite } = require("drizzle-orm/better-sqlite3");
     const path = require("path");
 
-    const dbPath = dbUrl || path.join(process.cwd(), "gameready.db");
+    const dbPath = path.join(process.cwd(), "gameready.db");
     const sqlite = new Database(dbPath);
     sqlite.pragma("journal_mode = WAL");
     sqlite.pragma("foreign_keys = ON");
@@ -34,10 +34,10 @@ else {
   } catch (err) {
     throw new Error(
       `SQLite is not available (this is normal on Vercel). ` +
-      `Set DATABASE_URL to a Neon PostgreSQL connection string. ` +
-      `Original error: ${err instanceof Error ? err.message : String(err)}`
+        `Set TURSO_URL and TURSO_AUTH_TOKEN for production. ` +
+        `Original error: ${err instanceof Error ? err.message : String(err)}`
     );
   }
 }
 
-export { db, schema, isPostgres };
+export { db, schema, isRemote };
