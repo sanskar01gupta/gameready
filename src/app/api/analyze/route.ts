@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { gameSlug, cpu, gpu, gpuVramGb, ramGb, detectionMethod } = parsed.data;
+    const { gameSlug, cpu, gpu, gpuSecondary, gpuVramGb, ramGb, detectionMethod } = parsed.data;
 
     // Fetch game + requirements
     const game = await getGameBySlug(gameSlug);
@@ -41,6 +41,7 @@ export async function POST(request: NextRequest) {
     const hardware = {
       cpu: cpu ?? null,
       gpu: gpu ?? null,
+      gpuSecondary: gpuSecondary ?? null,
       gpuVramGb: gpuVramGb ?? null,
       ramGb,
       os: "Windows 10",

@@ -6,6 +6,9 @@ export interface NormalizedHardware {
   cpuConfidence: "high" | "medium" | "low";
   gpu: string | null;
   gpuConfidence: "high" | "medium" | "low";
+  /** Secondary GPU (typically integrated) — only set on dual-GPU systems */
+  gpuSecondary: string | null;
+  gpuSecondaryConfidence: "high" | "medium" | "low";
   ramGb: number | null;
   cores: number | null;
 }
@@ -17,6 +20,7 @@ export interface NormalizedHardware {
 export function normalizeHardware(raw: {
   cpuCores: number | null;
   gpuRaw: string | null;
+  gpuRawSecondary?: string | null;
   ramGb: number | null;
   os: string | null;
 }): NormalizedHardware {
@@ -25,11 +29,13 @@ export function normalizeHardware(raw: {
     cpuConfidence: "low",
     gpu: null,
     gpuConfidence: "low",
+    gpuSecondary: null,
+    gpuSecondaryConfidence: "low",
     ramGb: raw.ramGb,
     cores: raw.cpuCores,
   };
 
-  // ── GPU normalization ──────────────────────────────────────────────
+  // ── Primary GPU normalization ──────────────────────────────────────
   if (raw.gpuRaw) {
     const parsed = parseGpuString(raw.gpuRaw);
     if (parsed) {
@@ -41,6 +47,21 @@ export function normalizeHardware(raw: {
         // Use the parsed model as-is (low confidence)
         result.gpu = parsed.model;
         result.gpuConfidence = "low";
+      }
+    }
+  }
+
+  // ── Secondary GPU normalization (dual-GPU laptops) ─────────────────
+  if (raw.gpuRawSecondary && raw.gpuRawSecondary !== raw.gpuRaw) {
+    const parsedSec = parseGpuString(raw.gpuRawSecondary);
+    if (parsedSec) {
+      const normalizedSec = findClosestMatch(parsedSec.model, gpuPerformanceIndex, gpuAliases);
+      if (normalizedSec) {
+        result.gpuSecondary = normalizedSec;
+        result.gpuSecondaryConfidence = normalizedSec === parsedSec.model ? "high" : "medium";
+      } else {
+        result.gpuSecondary = parsedSec.model;
+        result.gpuSecondaryConfidence = "low";
       }
     }
   }

@@ -1,6 +1,8 @@
 export interface HardwareInfo {
   cpu: string | null;
   gpu: string | null;
+  /** Secondary GPU (typically integrated) from dual-GPU laptops */
+  gpuSecondary?: string | null;
   gpuVramGb: number | null;
   ramGb: number;
   os: string | null;

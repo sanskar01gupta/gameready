@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Metadata } from "next";
 import { getGameBySlug } from "@/lib/db/queries";
 import { RequirementsTable } from "@/components/games/requirements-table";
+import { isMobileDevice } from "@/lib/utils/device-detect";
 
 export const dynamic = "force-dynamic";
 import { HardwareForm } from "@/components/detection/hardware-form";
@@ -42,6 +43,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function GameDetailPage({ params }: Props) {
   const { slug } = await params;
   const game = await getGameBySlug(slug);
+  const isMobile = await isMobileDevice();
 
   if (!game) notFound();
 
@@ -128,7 +130,7 @@ export default async function GameDetailPage({ params }: Props) {
           </div>
         </div>
 
-        <HardwareForm gameSlug={game.slug} gameTitle={game.title} />
+        <HardwareForm gameSlug={game.slug} gameTitle={game.title} isMobile={isMobile} />
       </section>
     </div>
   );

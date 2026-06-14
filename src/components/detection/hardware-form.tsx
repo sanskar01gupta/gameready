@@ -16,6 +16,7 @@ import {
 import { cpuPerformanceIndex, gpuPerformanceIndex } from "@/lib/detection/hardware-db";
 import { detectAll } from "@/lib/detection/browser";
 import { normalizeHardware } from "@/lib/detection/normalize";
+import { MobileWarning } from "@/components/ui/mobile-warning";
 
 const CPU_LIST = Object.keys(cpuPerformanceIndex).sort();
 const GPU_LIST = Object.keys(gpuPerformanceIndex).sort();
@@ -24,9 +25,10 @@ const RAM_OPTIONS = [4, 8, 12, 16, 24, 32, 48, 64];
 interface HardwareFormProps {
   gameSlug: string;
   gameTitle: string;
+  isMobile?: boolean;
 }
 
-export function HardwareForm({ gameSlug, gameTitle }: HardwareFormProps) {
+export function HardwareForm({ gameSlug, gameTitle, isMobile }: HardwareFormProps) {
   const router = useRouter();
   const [cpu, setCpu] = useState("");
   const [gpu, setGpu] = useState("");
@@ -43,10 +45,12 @@ export function HardwareForm({ gameSlug, gameTitle }: HardwareFormProps) {
   const [detectedInfo, setDetectedInfo] = useState<{
     cpu: string | null;
     gpu: string | null;
+    gpuSecondary: string | null;
     gpuRaw: string | null;
+    gpuRawSecondary: string | null;
     ramGb: number | null;
     cores: number | null;
-    confidence: { cpu: string; gpu: string };
+    confidence: { cpu: string; gpu: string; gpuSecondary: string };
   } | null>(null);
   const [showDetectDetails, setShowDetectDetails] = useState(false);
 
@@ -67,17 +71,26 @@ export function HardwareForm({ gameSlug, gameTitle }: HardwareFormProps) {
       await new Promise((r) => setTimeout(r, 600));
 
       const raw = detectAll();
-      const normalized = normalizeHardware(raw);
+      const normalized = normalizeHardware({
+        cpuCores: raw.cpuCores,
+        gpuRaw: raw.gpuRaw,
+        gpuRawSecondary: raw.gpuRawSecondary,
+        ramGb: raw.ramGb,
+        os: raw.os,
+      });
 
       const info = {
         cpu: normalized.cpu,
         gpu: normalized.gpu,
+        gpuSecondary: normalized.gpuSecondary,
         gpuRaw: raw.gpuRaw,
+        gpuRawSecondary: raw.gpuRawSecondary,
         ramGb: normalized.ramGb,
         cores: normalized.cores,
         confidence: {
           cpu: normalized.cpuConfidence,
           gpu: normalized.gpuConfidence,
+          gpuSecondary: normalized.gpuSecondaryConfidence,
         },
       };
 
@@ -131,6 +144,7 @@ export function HardwareForm({ gameSlug, gameTitle }: HardwareFormProps) {
           gameSlug,
           cpu,
           gpu,
+          gpuSecondary: detectedInfo?.gpuSecondary ?? null,
           ramGb,
           detectionMethod: detectedInfo ? "mixed" : "manual",
         }),
@@ -162,6 +176,9 @@ export function HardwareForm({ gameSlug, gameTitle }: HardwareFormProps) {
 
   return (
     <div className="space-y-5">
+      {/* ── Mobile Warning ──────────────────────────────────────────── */}
+      {isMobile && <MobileWarning />}
+
       {/* ── Auto-Detect Button ─────────────────────────────────────── */}
       <div className="rounded-xl border border-[var(--accent)]/20 bg-[var(--accent)]/5 p-4">
         <div className="flex items-start justify-between gap-4">
@@ -183,6 +200,12 @@ export function HardwareForm({ gameSlug, gameTitle }: HardwareFormProps) {
                     <Monitor className="h-3 w-3" />
                     <span className="truncate max-w-[280px]">
                       GPU detected: {detectedInfo.gpuRaw}
+                      {detectedInfo.gpuSecondary && (
+                        <span className="text-[var(--accent)]">
+                          {" "}
+                          + second GPU also found
+                        </span>
+                      )}
                     </span>
                   </div>
                 )}
@@ -196,6 +219,18 @@ export function HardwareForm({ gameSlug, gameTitle }: HardwareFormProps) {
                   <div className="flex items-center gap-1.5 text-[var(--muted-foreground)]">
                     <MemoryStick className="h-3 w-3" />
                     <span>~{detectedInfo.ramGb} GB RAM detected</span>
+                  </div>
+                )}
+
+                {/* Closest-match note for low-confidence GPU */}
+                {detectedInfo.gpu && detectedInfo.confidence.gpu === "low" && (
+                  <div className="flex items-start gap-1.5 mt-2 p-2 rounded-lg bg-[var(--warning)]/10 border border-[var(--warning)]/20">
+                    <AlertTriangle className="h-3 w-3 text-[var(--warning)] shrink-0 mt-0.5" />
+                    <p className="text-[var(--warning)]">
+                      This is the closest match from our hardware database. Your
+                      actual GPU may differ. Please select your exact model
+                      manually for the most accurate results.
+                    </p>
                   </div>
                 )}
 
@@ -225,10 +260,26 @@ export function HardwareForm({ gameSlug, gameTitle }: HardwareFormProps) {
                     {detectedInfo.gpu && (
                       <div className="flex items-center gap-1.5">
                         {confidenceBadge(detectedInfo.confidence.gpu)}
-                        <span className="text-[var(--muted-foreground)]">GPU:</span>
+                        <span className="text-[var(--muted-foreground)]">
+                          GPU (primary):
+                        </span>
                         <span className="font-medium">{detectedInfo.gpu}</span>
                         <span className="text-[var(--muted-foreground)] text-[10px] capitalize">
                           ({detectedInfo.confidence.gpu} confidence)
+                        </span>
+                      </div>
+                    )}
+                    {detectedInfo.gpuSecondary && (
+                      <div className="flex items-center gap-1.5">
+                        {confidenceBadge(detectedInfo.confidence.gpuSecondary)}
+                        <span className="text-[var(--muted-foreground)]">
+                          GPU (secondary):
+                        </span>
+                        <span className="font-medium">
+                          {detectedInfo.gpuSecondary}
+                        </span>
+                        <span className="text-[var(--muted-foreground)] text-[10px] capitalize">
+                          ({detectedInfo.confidence.gpuSecondary} confidence)
                         </span>
                       </div>
                     )}

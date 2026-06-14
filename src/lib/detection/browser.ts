@@ -6,6 +6,10 @@
 export interface DetectedHardware {
   cpuCores: number | null;
   gpuRaw: string | null;
+  /** Secondary GPU raw string (typically integrated) — only set on dual-GPU systems */
+  gpuRawSecondary: string | null;
+  /** All unique GPU raw strings detected */
+  allGpuRaws: string[];
   ramGb: number | null;
   os: string | null;
   screenResolution: string | null;
@@ -25,8 +29,13 @@ export function detectCpuCores(): number | null {
  * Detect GPU model via WebGL renderer info.
  * Creates a hidden canvas, gets WebGL context, reads the renderer string.
  * Returns the raw GPU string (needs parsing via gpu-parser.ts).
+ *
+ * @param powerPreference — hints which GPU to use:
+ *   - "low-power" → typically the integrated GPU (iGPU)
+ *   - "high-performance" → typically the dedicated GPU (dGPU)
+ *   - undefined → browser default (usually integrated on laptops)
  */
-export function detectGpu(): string | null {
+export function detectGpu(powerPreference?: "low-power" | "high-performance"): string | null {
   if (typeof document === "undefined") return null;
 
   try {
@@ -34,7 +43,13 @@ export function detectGpu(): string | null {
     canvas.width = 1;
     canvas.height = 1;
 
-    const gl = canvas.getContext("webgl2") || canvas.getContext("webgl");
+    const contextOptions: WebGLContextAttributes = powerPreference
+      ? { powerPreference, failIfMajorPerformanceCaveat: false }
+      : {};
+
+    const gl =
+      canvas.getContext("webgl2", contextOptions) ||
+      canvas.getContext("webgl", contextOptions);
     if (!gl) return null;
 
     const debugInfo = gl.getExtension("WEBGL_debug_renderer_info");
@@ -48,6 +63,29 @@ export function detectGpu(): string | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * Detect all GPUs on a dual-GPU system by trying both power preferences.
+ * On single-GPU systems, both calls may return the same renderer string
+ * (or the second may fail), in which case we deduplicate.
+ */
+export function detectAllGpus(): { gpuRaw: string | null; gpuRawSecondary: string | null; allGpuRaws: string[] } {
+  // Try high-performance first (likely dGPU) — this is the "primary" for gaming
+  const highPerf = detectGpu("high-performance");
+  // Then try low-power (likely iGPU)
+  const lowPower = detectGpu("low-power");
+
+  // Build unique list, preferring high-perf as primary
+  const unique: string[] = [];
+  if (highPerf) unique.push(highPerf);
+  if (lowPower && lowPower !== highPerf) unique.push(lowPower);
+
+  return {
+    gpuRaw: highPerf || lowPower || null,
+    gpuRawSecondary: highPerf && lowPower && highPerf !== lowPower ? lowPower : null,
+    allGpuRaws: unique,
+  };
 }
 
 /**
@@ -87,11 +125,15 @@ export function detectScreenResolution(): string {
 /**
  * Run all hardware detections. Returns whatever was found.
  * Some values may be null if the browser doesn't support the API.
+ * On dual-GPU systems, both GPU renderer strings are captured.
  */
 export function detectAll(): DetectedHardware {
+  const gpus = detectAllGpus();
   return {
     cpuCores: detectCpuCores(),
-    gpuRaw: detectGpu(),
+    gpuRaw: gpus.gpuRaw,
+    gpuRawSecondary: gpus.gpuRawSecondary,
+    allGpuRaws: gpus.allGpuRaws,
     ramGb: detectRam(),
     os: detectOS(),
     screenResolution: detectScreenResolution(),
